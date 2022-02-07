@@ -1,0 +1,8 @@
+setup.py
+bayes_tda/__init__.py
+bayes_tda/intensities.py
+bayes_tda.egg-info/PKG-INFO
+bayes_tda.egg-info/SOURCES.txt
+bayes_tda.egg-info/dependency_links.txt
+bayes_tda.egg-info/requires.txt
+bayes_tda.egg-info/top_level.txt
