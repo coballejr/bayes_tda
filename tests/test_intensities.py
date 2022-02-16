@@ -1,6 +1,10 @@
 import unittest
 from bayes_tda.intensities import RestrictedGaussian, RGaussianMixture
 import numpy as np
+import matplotlib.pyplot as plt
+
+
+# unit tests
 
 class TestRestrictedGaussian(unittest.TestCase):
     
@@ -53,6 +57,39 @@ class TestRGaussianMixture(unittest.TestCase):
         
         self.assertEqual(rgm.Qs[0], 0.25)
         self.assertEqual(rgm.Qs[1], 0.25)
+        
+    def test_compute_mask(self):
+        x = np.array([[-1, 5], [0, 5], [1, 5], [2, 5], [2, -3]])
+        
+        mus = np.zeros((2,2))
+        sigmas = np.ones(2)
+        weights = np.ones(2)
+        
+        rgm = RGaussianMixture(mus, sigmas, weights)
+        mask = rgm._compute_mask(x)
+        ans = np.array([0, 1, 1, 1, 0])
+        
+        self.assertEqual(mask.tolist(), ans.tolist())
+        
+    def test_evaluate(self):
+        mus = np.zeros((2,2))
+        sigmas = np.ones(2)
+        weights = np.ones(2)
+        
+        rgm = RGaussianMixture(mus, sigmas, weights)
+        
+        x1 = np.array([1, 1])
+        x2 = np.array([[1, 1], [-1, 1], [2, -3]])
+        
+        d1 = rgm.evaluate(x1)
+        d2 = rgm.evaluate(x2)
+        
+        ans1 = [(1 / (2 * np.pi)) * np.exp(-1)]
+        ans2 = [(1 / (2 * np.pi)) * np.exp(-1), 0, 0]
+        
+        self.assertEqual(d1.tolist(), ans1)
+        self.assertEqual(d2.tolist(), ans2)
+
         
 if __name__ == '__main__':
     unittest.main()

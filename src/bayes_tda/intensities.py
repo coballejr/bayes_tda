@@ -1,5 +1,7 @@
 import numpy as np
+import matplotlib.pyplot as plt
 from scipy.stats import multivariate_normal as mvn
+from bayes_tda.math import _vectorized_mahalanobis_distance2D
 
 class RestrictedGaussian:
     '''
@@ -20,7 +22,7 @@ class RestrictedGaussian:
                     float that specifies minimum allowable birth time, e.g, this value
                     should be set to 0 when used with diagrams created from Rips filtrations. 
                     The default is 0.
-        fastQ: TYPE, optional
+        fastQ: bool, optional
                Boolean to specify whether to approximate normalizing constant Q
                with 1. The default is False.
                
@@ -155,6 +157,108 @@ class RGaussianMixture:
             Qs[i] = component.Q
         
         self.Qs = Qs
+        
+    def _compute_mask(self, x) :
+        '''
+        Compute mask to zero out points in restricted Gaussian density evaluation.
+
+        Parameters
+        ----------
+        x: np.array of birth-pers coordinates, shape = (num_points, 2)
+        
+        Returns
+        -------
+        mask: np.array, shape = (num_points, ).
+              0 where birth coordinates are less than min birth or persistence is negative.
+
+        '''
+        
+        num_points = x.shape[0]
+        min_births = np.repeat(self.min_birth, num_points)
+        
+        b, p = x[:, 0], x[:, 1]
+        mask1 = b >= min_births
+        mask2 = p > np.zeros(num_points)
+        mask = mask1*mask2
+        
+        return mask
+        
+    def evaluate(self, x):
+        '''
+        Evaluate density at points in array x.
+
+        Parameters
+        ----------
+        x : np.array of birth-pers coordinates, shape = (num_points, 2).
+
+        Returns
+        -------
+        densities : np.array shape = (num_points, ).
+
+        '''
+        
+        x = np.atleast_2d(x)
+        mask = self._compute_mask(x)
+        
+        P = np.array([(1 / (sigma ** 2)) * np.eye(2) for sigma in self.sigmas])
+        dists = _vectorized_mahalanobis_distance2D(X = x, U = self.mus, P = P)
+        
+        gaussian_normalizing_consts = 1 / (2 * np.pi * (self.sigmas ** 2))
+        exps = np.exp(-0.5*dists)
+        gaussian_densities = exps*gaussian_normalizing_consts
+        densities = (gaussian_densities*self.weights).sum(axis = 1)
+        
+        
+        return densities*mask
+    
+    def show_density(self, linear_grid, title = 'Mixed Gaussian Density', show_means = True, plot_additional_pts = False, additional_pts = None):
+        '''
+        Plot pdf of Gaussian mixture. 
+
+        Parameters
+        ----------
+        linear_grid : np.array, shape = (sqrt(grid_size), )
+                      Cartesian product is taken to form grid.
+        title : str, optional
+                 Title of plot. The default is 'Mixed Gaussian Density'.
+        show_means : bool, optional
+                     Specifies whether to show means. The default is True.
+        plot_additional_pts : bool, optional
+                              Specifies whether to add additional points to plot. The default is False.
+        additional_pts : None or np.array with shape = (num_additional_pts, 2), optional
+                         Coordinates of additional points to add. The default is None.
+
+        '''
+        
+        X, Y = np.meshgrid(linear_grid, linear_grid)
+        XY = np.vstack([X.flatten(), Y.flatten()]).T
+        Z = self.evaluate(XY)
+        
+        plt.contourf(X, Y, Z.reshape(X.shape))
+        plt.xlabel('Birth')
+        plt.ylabel('Persistence')
+        
+        cb = plt.colorbar()
+        cb.set_label('Density')
+        
+        plt.title(title)
+        
+        if show_means:
+            mu_b, mu_p = self.mus[:, 0], self.mus[:, 1]
+            plt.scatter(mu_b, mu_p, label = 'Means')
+            plt.legend()
+            
+        if plot_additional_pts and additional_pts:
+            plt.scatter(additional_pts[:, 0], additional_pts[:, 1])
+        
+        
+        plt.gca().set_aspect('equal')
+        plt.show()
+        plt.close()
+        
+    
+    
+    
                 
             
             
