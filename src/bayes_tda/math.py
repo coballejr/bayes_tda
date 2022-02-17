@@ -25,3 +25,26 @@ def _vectorized_mahalanobis_distance2D(X, U, P):
     D = np.einsum('jik,jkl,jil->ij', diff, P, diff)
     
     return D
+
+def _cartesian_product(U, Y):
+    '''
+    Expand two arrays for vectorized computations with their Cartesian product.
+
+    Parameters
+    ----------
+    U : np.array, shape = (m, 2).
+    Y : np.array, shape = (n, 2)
+
+    Returns
+    -------
+    U_expanded: np.array, shape = (m*n, 2).
+    Y_expanded: np.array, shape = (m*n, 2)
+
+    '''
+    
+    m, n = U.shape[0], Y.shape[0]
+    U_expanded = np.repeat(U, n, axis = 0)
+    Y_expanded = np.tile(Y, reps = (m, 1))
+    
+    return U_expanded, Y_expanded
+    

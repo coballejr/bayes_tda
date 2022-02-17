@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import multivariate_normal as mvn
-from bayes_tda.math import _vectorized_mahalanobis_distance2D
+from bayes_tda.math import _vectorized_mahalanobis_distance2D, _cartesian_product
 
 class RestrictedGaussian:
     '''
@@ -107,7 +107,7 @@ class RGaussianMixture:
     Mixture of two-dimensional isotropic Gaussians restricted to a subset of R^2.
     '''
     
-    def __init__(self, mus, sigmas, weights, tilted = True, min_birth = 0, fastQ = False):
+    def __init__(self, mus, sigmas, weights, normalize_weights = True, tilted = True, min_birth = 0, fastQ = False):
         '''
         Parameters
         ----------
@@ -117,13 +117,15 @@ class RGaussianMixture:
                  Diagonal entries in covariance matrices of each Gaussian component in mixture. 
         weights: array-like, shape = (num_means,).
                 Non-negative weights of each Gaussian component in mixture. Can be unnormalized. 
-       tilted : TYPE, optional
+        normalize_weights: bool, optional.
+                           Boolean to specify whether to normalize component weights. The default is True.
+        tilted : bool, optional
                 Boolean to specify whether to use tilted coordinates. The default is True.
         min_birth : TYPE, optional
                     float that specifies minimum allowable birth time, e.g, this value
                     should be set to 0 when used with diagrams created from Rips filtrations. 
                     The default is 0.
-        fastQ: TYPE, optional
+        fastQ: bool, optional
                Boolean to specify whether to approximate normalizing constants Q
                with 1. The default is False.
 
@@ -135,7 +137,7 @@ class RGaussianMixture:
         
         self.mus = mus
         self.sigmas = sigmas
-        self.weights = weights / weights.sum()
+        self.weights = weights / weights.sum() if normalize_weights else weights
         self.tilted = tilted
         self.min_birth = min_birth
         self.fastQ = fastQ
@@ -200,10 +202,10 @@ class RGaussianMixture:
         x = np.atleast_2d(x)
         mask = self._compute_mask(x)
         
-        P = np.array([(1 / (sigma ** 2)) * np.eye(2) for sigma in self.sigmas])
+        P = np.array([(1 / sigma) * np.eye(2) for sigma in self.sigmas])
         dists = _vectorized_mahalanobis_distance2D(X = x, U = self.mus, P = P)
         
-        gaussian_normalizing_consts = 1 / (2 * np.pi * (self.sigmas ** 2))
+        gaussian_normalizing_consts = 1 / (2 * np.pi * (self.sigmas))
         exps = np.exp(-0.5*dists)
         gaussian_densities = exps*gaussian_normalizing_consts
         densities = (gaussian_densities*self.weights).sum(axis = 1)
@@ -247,11 +249,151 @@ class RGaussianMixture:
             mu_b, mu_p = self.mus[:, 0], self.mus[:, 1]
             plt.scatter(mu_b, mu_p, label = 'Means')
             plt.legend()
+            
+        if plot_additional_pts and additional_pts:
+            plt.scatter(additional_pts[:, 0], additional_pts[:, 1])
         
         
         plt.gca().set_aspect('equal')
         plt.show()
         plt.close()
+        
+
+class Posterior:
+    '''
+    Posterior intensity class for persistence diagrams.
+    '''
+        
+    def __init__(self, DYO, prior, clutter, sigma_DYO, alpha = 1):
+        '''
+        
+
+        Parameters
+        ----------
+        DYO : list or tuple of np.arrays
+             Observed persistence diagrams.
+        prior : RGaussianMixture object.
+                Prior intensity.
+        clutter : RGaussianMixture object.
+                  Intensity for clutter/ spurious features.
+        sigma_DYO : float.
+                    \sigma^{D_{Y_O}} parameter in posterior intensity.
+        alpha : float, optional
+                Alpha parameter in posterior intensity. The default is 1.
+
+        Returns
+        -------
+        None.
+
+        '''
+        
+        self.DYO = DYO
+        self.num_obs_dgms = len(DYO)
+        self.sigma_DYO = sigma_DYO
+        self.alpha = alpha
+        self.prior = prior
+        self.clutter = clutter
+        
+        posterior_means, posterior_sigmas = self._compute_posterior_mus_and_sigmas()
+        
+        self.posterior_means = posterior_means
+        self.posterior_sigmas = posterior_sigmas
+        self.ws = self._compute_ws()
+        self.Qs = self._compute_Qs(posterior_means, posterior_sigmas)
+        self.Cs = self._compute_Cs(self.ws, self.Qs)
+        
+        
+    def _compute_posterior_mus_and_sigmas(self):
+        '''
+        Computes posterior means and standard deviations.
+        
+        Returns
+        -------
+        posterior_means: np.array, shape = (n_prior_components*n_obs_pd_features, 2).
+        posterior_sigmas: np.array, shape = (n_prior_components*n_obs_pd_features,)
+        '''
+        
+        Y = np.vstack(self.DYO)
+        prior_means = self.prior.mus
+        
+        prior_means, Y_expanded = _cartesian_product(prior_means, Y)
+        prior_sigmas = self.prior.sigmas.repeat(Y.shape[0]).reshape(-1, 1)
+        
+        posterior_means = (self.sigma_DYO*prior_means + prior_sigmas*Y_expanded) / (self.sigma_DYO + prior_sigmas)
+        posterior_sigmas = (self.sigma_DYO*prior_sigmas) / (self.sigma_DYO + prior_sigmas)
+        
+        return posterior_means, posterior_sigmas.flatten()
+    
+    def _compute_ws(self):
+        '''
+        Computes w_{j}^{y} values in posterior intensity
+
+        Returns
+        -------
+        w: np.array, shape = (n_prior_components*n_obs_pd_features,).
+        '''
+        
+        Y = np.vstack(self.DYO)
+        
+        prior_means = self.prior.mus
+        prior_means, Y_expanded = _cartesian_product(prior_means, Y)
+        sigmas = self.prior.sigmas.repeat(Y.shape[0]) + self.sigma_DYO
+        prior_weights = self.prior.weights.repeat(Y.shape[0])
+        
+        d_sq = ((Y_expanded - prior_means)**2).sum(axis = 1)
+        dens = (1 / (2*np.pi*sigmas))*np.exp(-0.5*(d_sq / sigmas))
+        w = prior_weights*dens
+        
+        return w
+    
+    def _compute_Qs(self, posterior_means, posterior_sigmas):
+        '''
+        Computes Q_{j}^{y} in posterior intensity.
+
+        Parameters
+        ----------
+        posterior_means: np.array, shape = (n_prior_components*n_obs_pd_features, 2).
+        posterior_sigmas: np.array, shape = (n_prior_components*n_obs_pd_features,)
+
+        Returns
+        -------
+        np.array, shape = (n_prior_components*n_obs_pd_features,).
+        '''
+        
+        tmp_rgm = RGaussianMixture(mus = posterior_means, sigmas = posterior_sigmas, 
+                                   weights = np.ones(posterior_means.shape[0]))
+        
+        return tmp_rgm.Qs
+    
+    def _compute_Cs(self, w, Q):
+        '''
+        Computes C_{j}^{y} in posterior intensity.
+
+        Parameters
+        ----------
+        w : np.array, shape = (n_prior_components*n_obs_pd_features,).
+        Q : np.array, shape = (n_prior_components*n_obs_pd_features,).
+
+        Returns
+        -------
+        C: np.array, shape = (n_prior_components*n_obs_pd_features,).
+        '''
+        
+        Y = np.vstack(self.DYO)
+        _, Y_expanded = _cartesian_product(self.prior.mus, Y)
+        
+        n_prior_components = self.prior.mus.shape[0]
+        n_obs_pd_features = Y.shape[0]
+        
+        wQ = (w*Q).reshape((n_prior_components, n_obs_pd_features))
+        swQ = wQ.sum(axis = 1)
+        swQ = swQ.repeat(n_obs_pd_features)
+        clutter = self.clutter.evaluate(Y_expanded)
+        
+        C = w / (clutter + self.alpha*swQ)
+        
+        return C
+        
         
     
     
