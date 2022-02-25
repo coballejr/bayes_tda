@@ -1,5 +1,6 @@
 setup.py
 bayes_tda/__init__.py
+bayes_tda/classifiers.py
 bayes_tda/comp_topo.py
 bayes_tda/data.py
 bayes_tda/intensities.py

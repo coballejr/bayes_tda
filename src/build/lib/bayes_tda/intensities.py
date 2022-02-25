@@ -241,7 +241,7 @@ class RGaussianMixture:
         plt.ylabel('Persistence')
         
         cb = plt.colorbar()
-        cb.set_label('Density')
+        cb.set_label('Intensity')
         
         plt.title(title)
         
@@ -264,7 +264,7 @@ class Posterior:
     Posterior intensity class for persistence diagrams.
     '''
         
-    def __init__(self, DYO, prior, clutter, sigma_DYO, alpha = 1):
+    def __init__(self, DYO, prior, clutter, sigma_DYO, alpha = 1, min_birth = 0):
         '''
         
 
@@ -280,6 +280,9 @@ class Posterior:
                     \sigma^{D_{Y_O}} parameter in posterior intensity.
         alpha : float, optional
                 Alpha parameter in posterior intensity. The default is 1.
+        min_birth: float, optional
+                   Minimum birth times for pd filtration. Should be 0 for Rips
+                   and -inf for cubical. The default is 0. 
 
         Returns
         -------
@@ -293,6 +296,7 @@ class Posterior:
         self.alpha = alpha
         self.prior = prior
         self.clutter = clutter
+        self.min_birth = min_birth
         
         posterior_means, posterior_sigmas = self._compute_posterior_mus_and_sigmas()
         
@@ -301,6 +305,11 @@ class Posterior:
         self.ws = self._compute_ws()
         self.Qs = self._compute_Qs(posterior_means, posterior_sigmas)
         self.Cs = self._compute_Cs(self.ws, self.Qs)
+        self.lambda_DYO = RGaussianMixture(posterior_means, 
+                                           posterior_sigmas,
+                                           weights = self.Cs,
+                                           normalize_weights= False,
+                                           min_birth = min_birth)
         
         
     def _compute_posterior_mus_and_sigmas(self):
@@ -361,7 +370,8 @@ class Posterior:
         '''
         
         tmp_rgm = RGaussianMixture(mus = posterior_means, sigmas = posterior_sigmas, 
-                                   weights = np.ones(posterior_means.shape[0]))
+                                   weights = np.ones(posterior_means.shape[0]),
+                                   min_birth = self.min_birth)
         
         return tmp_rgm.Qs
     
@@ -393,6 +403,88 @@ class Posterior:
         C = w / (clutter + self.alpha*swQ)
         
         return C
+    
+    def evaluate(self, x):
+        '''
+        Evaluate posterior intensity at points in array x.
+
+        Parameters
+        ----------
+        x : np.array of birth-pers coordinates, shape = (num_points, 2).
+
+        Returns
+        -------
+        intensities: np.array shape = (num_points, ).
+        '''
+        
+        alpha = self.alpha
+        prior = self.prior
+        lambda_DYO = self.lambda_DYO
+        m = self.num_obs_dgms
+        
+        intensities = (1 - alpha)*prior.evaluate(x) + (alpha/ m)*lambda_DYO.evaluate(x)
+        
+        return intensities
+    
+    def evaluate_dgm(self, dgm, log = True):
+        '''
+        Evaluate persistence diagram in posterior intensity.
+        
+
+        Parameters
+        ----------
+        dgm : np.array, shape = (n_features, 2)
+              persistence diagram.
+        log : bool, optional
+              Specifies whether to return log intensity. The default is True.
+
+        Returns
+        -------
+        intensity: float.
+        '''
+        
+        intensity_pts = self.evaluate(dgm)
+        
+
+        intensity = np.log(intensity_pts).sum()
+        
+        return intensity if log else np.exp(intensity)
+    
+    def evaluate_dgms(self, dgms, log = True):
+        '''
+        Evaluate multiple persistence diagrams in posterior intensity.
+        
+
+        Parameters
+        ----------
+        dgms : list of np.arrays.
+                list of persistence diagrams.
+        log : bool, optional
+              Specifies whether to return log intensity. The default is True.
+
+        Returns
+        -------
+        intensities: np.array of intensites.
+
+        '''
+        
+        intensities = np.zeros(len(dgms))
+        
+        for i, dgm in enumerate(dgms):
+            intensities[i] = self.evaluate_dgm(dgm, log = log)
+            
+        return intensities
+    
+    def show_lambda_DYO(self, linear_grid, **kwargs):
+        self.lambda_DYO.show_density(linear_grid, title = r'$\lambda_{D_{Y_O}}$', **kwargs)
+        
+    def show_prior(self, linear_grid, **kwargs):
+        self.prior.show_density(linear_grid, title = 'Prior', **kwargs)
+        
+    def show_clutter(self, linear_grid, **kwargs):
+        self.clutter.show_density(linear_grid, title = r'$\lambda_{D_{Y_S}}$', **kwargs)
+        
+        
 
 # TO DO: unit tests for Posterior and RGaussian mixture visualization
     
@@ -406,6 +498,20 @@ if __name__ == '__main__':
 
     linear_grid = np.linspace(0, 6, 20)
     rgm.show_density(linear_grid)
+    
+    dgms = [d for d in 6*np.random.rand(100, 30, 2)]
+    post = Posterior(DYO = dgms,
+                     prior = rgm,
+                     clutter = rgm,
+                     sigma_DYO= 0.1)
+    
+    
+    l_intensities = post.evaluate_dgms(dgms)
+    intensities = post.evaluate_dgms(dgms, log = False)
+    post.show_lambda_DYO(linear_grid, show_means = False)
+    post.show_prior(linear_grid, show_means = False)
+    post.show_clutter(linear_grid, show_means = False) 
+    
 
         
         

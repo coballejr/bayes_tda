@@ -1,5 +1,5 @@
 import numpy as np
-from comp_topo import compute_dgms
+from bayes_tda.comp_topo import compute_dgms
 
 class LabeledData:
     '''
@@ -59,8 +59,8 @@ class LabeledPointClouds(LabeledData):
         
 class LabeledImages(LabeledData):
     
-    def __init__(self, point_clouds, labels, filtration = 'cubical', hdim = 1):
-        super(LabeledImages, self).__init__(data = point_clouds, labels = labels)
+    def __init__(self, images, labels, filtration = 'cubical', hdim = 1):
+        super(LabeledImages, self).__init__(data = images, labels = labels)
         
         self.filtration = filtration
         self.hdim = hdim
