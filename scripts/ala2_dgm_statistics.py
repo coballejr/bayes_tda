@@ -8,13 +8,13 @@ LABELS = 'ala2_labels.npy'
 
 DATA_SCALE = 10
 HEAVY_ATOM_INDS = [1, 4, 6, 8, 14, 16, 18]
-HDIM = 0
+HDIM = 1
 
 if __name__ == '__main__':
     
     # load data
     data = DATA_SCALE*np.load(DATA_PATH + DATA)
-    data = data[:, HEAVY_ATOM_INDS, :]
+    #data = data[:, HEAVY_ATOM_INDS, :]
     labels = np.load(DATA_PATH + LABELS)
     
     # create dgms

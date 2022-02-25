@@ -2,7 +2,7 @@ import numpy as np
 from bayes_tda.intensities import RGaussianMixture
 from bayes_tda.classifiers import EmpBayesFactorClassifier as EBFC
 import matplotlib.pyplot as plt
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_curve, auc
 
 DATA_PATH = '/home/chris/projects/bayes_tda/data/'
 DATA = 'bccfcc.npy'
@@ -64,8 +64,8 @@ if __name__ == '__main__':
     scores_0 = np.exp(scores[0])
     scores_1 = np.exp(scores[1])
     
-    scores_0 = scores_0[:, 0]/ scores_0[:, 1]
-    scores_1 = scores_1[:, 0]/ scores_1[:, 1]
+    scores_0 = scores_0[:, 1]/ scores_0[:, 0]
+    scores_1 = scores_1[:, 1]/ scores_1[:, 0]
     
     plt.hist(scores_0, label = 'beta', color = 'blue', alpha = 0.5)
     plt.hist(scores_1, label = 'alpha', color = 'red', alpha = 0.5)
@@ -78,8 +78,8 @@ if __name__ == '__main__':
     
     y_true = np.concatenate([y0, y1])
     y_score = np.concatenate([scores_0, scores_1])
-    auc = roc_auc_score(y_true = y_true, y_score = y_score)
-    
-    print('AUC: ' + str(auc))
+    tpr, fpr, _ = roc_curve(y_true, y_score, pos_label = 1)
+    AUC = auc(fpr,tpr)
+    print('AUC: ' + str(AUC))
     
     
