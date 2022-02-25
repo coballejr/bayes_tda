@@ -1,31 +1,26 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from bayes_tda.data import LabeledPointClouds
+from bayes_tda.data import LabeledPDs
 
 DATA_PATH = '/home/chris/projects/bayes_tda/data/'
-DATA = 'ala2.npy'
-LABELS = 'ala2_labels.npy'
-
-DATA_SCALE = 10
-HEAVY_ATOM_INDS = [1, 4, 6, 8, 14, 16, 18]
-HDIM = 0
+DATA = 'bccfcc.npy'
+LABELS = 'bccfcc_labels.npy'
 
 if __name__ == '__main__':
     
     # load data
-    data = DATA_SCALE*np.load(DATA_PATH + DATA)
-    data = data[:, HEAVY_ATOM_INDS, :]
+    data = np.load(DATA_PATH + DATA)
     labels = np.load(DATA_PATH + LABELS)
     
     # create dgms
-    labeled_data = LabeledPointClouds(data, labels, hdim = HDIM)
-    grouped_dgms = labeled_data.grouped_dgms
+    labeled_data = LabeledPDs(data, labels)
+    grouped_data = labeled_data.grouped_data
     
     
     # plot all diagrams in group
     fig, ax = plt.subplots(1, 2)
-    for k in grouped_dgms.keys():
-        dgms = grouped_dgms[k]
+    for k in grouped_data.keys():
+        dgms = grouped_data[k]
         features = np.vstack(dgms)
         ax[k].scatter(features[:, 0], features[:, 1], s = 1)
         ax[k].set_title('Class ' + str(k))
@@ -35,8 +30,8 @@ if __name__ == '__main__':
     
     # plot histgram of birth / persistence
     fig, ax = plt.subplots(1, 2)
-    for k in grouped_dgms.keys():
-        dgms = grouped_dgms[k]
+    for k in grouped_data.keys():
+        dgms = grouped_data[k]
         features = np.vstack(dgms)
         ax[k].hist(features[:, 1])
         ax[k].set_title('Class ' + str(k))
@@ -45,10 +40,10 @@ if __name__ == '__main__':
     plt.close()
     
     # plot individual PDs
-    fig, ax = plt.subplots(1, 2)
-    for k in grouped_dgms.keys():
-        dgms = grouped_dgms[k]
-        dgm = dgms[1]
+    fig, ax = plt.subplots(1, 2, sharex = True, sharey = True)
+    for k in grouped_data.keys():
+        dgms = grouped_data[k]
+        dgm = dgms[2]
         ax[k].scatter(dgm[:, 0], dgm[:, 1], s = 1)
         ax[k].set_title('Class ' + str(k))
     
@@ -56,5 +51,3 @@ if __name__ == '__main__':
     plt.show()
     plt.close()
         
-    
-    
