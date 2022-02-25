@@ -67,6 +67,8 @@ class EmpBayesFactorClassifier:
             scores_dict[k] = scores 
                 
         return scores_dict
+    
+# TODO: unit tests for classifieres
             
             
             

@@ -297,6 +297,7 @@ class Posterior:
         self.prior = prior
         self.clutter = clutter
         self.min_birth = min_birth
+        self._estimate_lambda()
         
         posterior_means, posterior_sigmas = self._compute_posterior_mus_and_sigmas()
         
@@ -404,6 +405,17 @@ class Posterior:
         
         return C
     
+    def _estimate_lambda(self):
+        '''
+        Estimate \lambda, expected value of posterior intensity.
+        
+        '''
+        
+        DYO = self.DYO
+        
+        card_dist = np.array([dgm.shape[0] for dgm in DYO])
+        self.lambd = np.mean(card_dist)
+    
     def evaluate(self, x):
         '''
         Evaluate posterior intensity at points in array x.
@@ -414,7 +426,7 @@ class Posterior:
 
         Returns
         -------
-        intensities: np.array shape = (num_points, ).
+        densities: np.array shape = (num_points, ).
         '''
         
         alpha = self.alpha
@@ -428,7 +440,7 @@ class Posterior:
     
     def evaluate_dgm(self, dgm, log = True):
         '''
-        Evaluate persistence diagram in posterior intensity.
+        Evaluate persistence diagram in posterior density.
         
 
         Parameters
@@ -440,15 +452,20 @@ class Posterior:
 
         Returns
         -------
-        intensity: float.
+        density: float.
         '''
         
         intensity_pts = self.evaluate(dgm)
+        n_features = dgm.shape[0]
         
-
         intensity = np.log(intensity_pts).sum()
+        lambd = self.lambd
+        log_dgm_fact = np.log(np.arange(1, n_features + 1)).sum()
+        log_scaling_factor = -(lambd + log_dgm_fact)
         
-        return intensity if log else np.exp(intensity)
+        density = intensity + log_scaling_factor
+        
+        return density if log else np.exp(density)
     
     def evaluate_dgms(self, dgms, log = True):
         '''
