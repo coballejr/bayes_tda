@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from bayes_tda.data import LabeledPDs
+from bayes_tda.intensities import RGaussianMixture, Posterior
 
 DATA_PATH = '/home/chris/projects/bayes_tda/data/'
 DATA = 'bccfcc.npy'
@@ -50,4 +51,28 @@ if __name__ == '__main__':
     plt.tight_layout()
     plt.show()
     plt.close()
+    
+    # view compute some posteriors
+    prior_mus = np.array([[3, 3]])
+    prior_sigmas = np.array([10])
+    prior_weights = np.array([5])
+    prior = RGaussianMixture(prior_mus, prior_sigmas, prior_weights)
+    
+    clutter_mus = np.array([[0.0, 0.0]])
+    clutter_sigmas = np.array([0.1])
+    clutter_weights = np.array([100])
+    clutter = RGaussianMixture(clutter_mus, clutter_sigmas, clutter_weights)
+    
+    sigma_DYO = 0.5
+    
+    bcc, fcc = grouped_data[0][20], grouped_data[1][20]
+    post_bcc = Posterior(DYO = [bcc], prior = prior, clutter = clutter, sigma_DYO = sigma_DYO)
+    post_fcc = Posterior(DYO = [fcc], prior = prior, clutter = clutter, sigma_DYO = sigma_DYO)
+    
+    linear_grid = np.linspace(0, 5.5, 20)
+    post_bcc.show_lambda_DYO(linear_grid, show_means = False)
+    post_fcc.show_lambda_DYO(linear_grid, show_means = False)
+    
+    
+    
         
