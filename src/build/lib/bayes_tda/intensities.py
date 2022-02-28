@@ -213,7 +213,7 @@ class RGaussianMixture:
         
         return densities*mask
     
-    def show_density(self, linear_grid, title = 'Mixed Gaussian Density', show_means = True, plot_additional_pts = False, additional_pts = None):
+    def show_density(self, linear_grid, title = 'Mixed Gaussian Density', show_means = True, plot_additional_pts = False, additional_pts = None, **kwargs):
         '''
         Plot pdf of Gaussian mixture. 
 
@@ -236,7 +236,7 @@ class RGaussianMixture:
         XY = np.vstack([X.flatten(), Y.flatten()]).T
         Z = self.evaluate(XY)
         
-        plt.contourf(X, Y, Z.reshape(X.shape))
+        plt.contourf(X, Y, Z.reshape(X.shape), **kwargs)
         plt.xlabel('Birth')
         plt.ylabel('Persistence')
         
@@ -250,9 +250,9 @@ class RGaussianMixture:
             plt.scatter(mu_b, mu_p, label = 'Means')
             plt.legend()
             
-        if plot_additional_pts and additional_pts:
-            plt.scatter(additional_pts[:, 0], additional_pts[:, 1])
-        
+        if plot_additional_pts:
+            plt.scatter(additional_pts[:, 0], additional_pts[:, 1], label = 'Observed PD', c = 'black', s = 8)
+            plt.legend()
         
         plt.gca().set_aspect('equal')
         plt.show()

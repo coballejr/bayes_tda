@@ -62,7 +62,7 @@ if __name__ == '__main__':
     plt.show()
     plt.close()
     
-    # view compute some posteriors
+    # compute and view some posteriors
     prior_mus = np.array([[3, 3]])
     prior_sigmas = np.array([10])
     prior_weights = np.array([5])

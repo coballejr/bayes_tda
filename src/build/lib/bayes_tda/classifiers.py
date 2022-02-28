@@ -32,6 +32,7 @@ class EmpBayesFactorClassifier:
         # partition training and test sets
         train = {}
         test = {}
+
         for k in grouped_dgms.keys():
             
             dgms = grouped_dgms[k]

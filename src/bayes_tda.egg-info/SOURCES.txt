@@ -1,8 +1,10 @@
 setup.py
 bayes_tda/__init__.py
+bayes_tda/bccfcc_post.py
 bayes_tda/classifiers.py
 bayes_tda/comp_topo.py
 bayes_tda/data.py
+bayes_tda/demos.py
 bayes_tda/intensities.py
 bayes_tda/math.py
 bayes_tda.egg-info/PKG-INFO
