@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from bayes_tda.data import _remove_padding
 from bayes_tda.data import LabeledPDs
 from bayes_tda.intensities import RGaussianMixture, Posterior
 
@@ -12,6 +13,15 @@ if __name__ == '__main__':
     # load data
     data = np.load(DATA_PATH + DATA)
     labels = np.load(DATA_PATH + LABELS)
+    data, labels = _remove_padding(data, labels)
+    
+    # make small dataset for demos
+    data_small = data[0:1000]
+    labels_small = labels[0:1000]
+    
+    np.save(DATA_PATH + 'bccfcc_small.npy', data_small, allow_pickle = True)
+    np.save(DATA_PATH + 'bccfcc_small_labels.npy', labels_small, allow_pickle = True)
+    
     
     # create dgms
     labeled_data = LabeledPDs(data, labels)

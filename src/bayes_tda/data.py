@@ -86,6 +86,41 @@ class LabeledPDs(LabeledData):
     def __init__(self, dgms, labels):
         super(LabeledPDs, self).__init__(data = dgms, labels = labels)
         
+def _remove_padding(dgms, labels):
+    '''
+    Removes zero-padding from persistence diagrams.
+
+    Parameters
+    ----------
+    dgms : np.array, shape = (n_dgms, n_pts_with_padding, 2).
+    labels: np.array, shape = (n_dgms, 1)
+
+    Returns
+    -------
+    dgms_lst: list of np.arrays with zero padding removed.
+    new_labels: labels of pds in dgms_lst
+    '''
+    
+    dgms_lst = []
+    new_labels = []
+    
+    for pd, label in zip(dgms, labels):
+        
+        pd_unpadded = []
+        
+        for feature in pd:
+            
+            birth, persistence = feature[0], feature[1]
+            
+            if (birth > 0) or (persistence > 0):
+                pd_unpadded.append([birth, persistence])
+                
+        if pd_unpadded:
+            dgms_lst.append(np.array(pd_unpadded))
+            new_labels.append(label)
+            
+    return dgms_lst, np.array(new_labels)
+        
 # TODO: unit tests for data
 
 if __name__ == '__main__':

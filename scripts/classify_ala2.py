@@ -2,6 +2,7 @@ import numpy as np
 from bayes_tda.intensities import RGaussianMixture
 from bayes_tda.classifiers import EmpBayesFactorClassifier as EBFC
 import matplotlib.pyplot as plt
+from bayes_tda.data import _remove_padding
 
 DATA_PATH = '/home/chris/projects/bayes_tda/data/'
 DATA = 'ala2.npy'
@@ -34,6 +35,8 @@ if __name__ == '__main__':
     # load data
     data = np.load(DATA_PATH + DATA)
     labels = np.load(DATA_PATH + LABELS)
+    data, labels = _remove_padding(data, labels)
+    data, labels = data[0:200], labels[0:200]
     
     # set hyperparameters
     prior = RGaussianMixture( mus = PRIOR_MUS, 
